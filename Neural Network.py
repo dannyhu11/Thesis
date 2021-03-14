@@ -28,7 +28,7 @@ class Network():
                 a = (np.dot(w,a)+b)
         return a
         
-    def Evaluate(self,data,accuracy1=None):
+    def Evaluate(self,data,accuracy1=True):
         result = [(self.Forward(x),y) for x,y in data]
         sums = sum((x-y)**2 for (x,y) in result)
         sum1 = sum(1-abs(x-y)/y for (x,y) in result)
@@ -82,16 +82,20 @@ class Network():
         n = len(trainingData)
         self.trainingprogresssion = []
         self.testprogression = []
+        self.AccuracyProgressionTest = []
+        self.AccuracyProgressionTraining = []
         for i in range(1,epochs):
             random.shuffle(trainingData)
             minibatches = [trainingData[k:k+batchsize] for k in range(0,n,batchsize)]
             for minibatch in minibatches:
                 self.Update_mini_batch(minibatch, eta)
             if testdata:
-                mse,result = self.Evaluate(testdata)
+                mse,result,accuracy1 = self.Evaluate(testdata)
                 self.testprogression.append(mse)
-                mse1,result1 = self.Evaluate(trainingData)
+                self.AccuracyProgressionTest.append(accuracy1)
+                mse1,result1,accuracy2 = self.Evaluate(trainingData)
                 self.trainingprogresssion.append(mse1)
+                self.AccuracyProgressionTraining.append(accuracy2)
                 print("Epoch {0} MseTraining : {1} MseTest: {2}".format(i,mse1,mse))
             else:
                 mse,result = self.Evaluate(trainingData)
@@ -128,13 +132,31 @@ def PlotNetworkResults(Results):
     plt.legend()
     plt.show()
 
-def PlotMSEProgression(Network):
+def PlotMSEProgression(Network,epochs,batchsize,learningrate):
     x = Network.testprogression
     y = Network.trainingprogresssion
-    plt.title('Test MSE')
+    plt.title('Test MSE (Epoch: {0} Units: {1} eta: {2})'.format(epochs,batchsize,learningrate))
     plt.plot(x)
+    plt.xlabel("Epochs")
+    plt.ylabel("MSE")
     plt.show()
-    plt.title("Training MSE")
+    plt.title('Training MSE (Epoch: {0} Units: {1} eta: {2})'.format(epochs,batchsize,learningrate))
+    plt.xlabel("Epochs")
+    plt.ylabel("MSE")
+    plt.plot(y)
+    plt.show()
+
+def PlotAccuracyProgression(Network,epochs,batchsize,learningrate):
+    x = Network.AccuracyProgressionTest
+    y = Network.AccuracyProgressionTraining
+    plt.title('Test Accuracy (Epoch: {0} Units: {1} eta: {2})'.format(epochs,batchsize,learningrate))
+    plt.plot(x)
+    plt.xlabel("Epochs")
+    plt.ylabel("Percentage")
+    plt.show()
+    plt.title('Training Accuracy (Epoch: {0} Units: {1} eta: {2})'.format(epochs,batchsize,learningrate))
+    plt.xlabel("Epochs")
+    plt.ylabel("Percentage")
     plt.plot(y)
     plt.show()
 
@@ -150,28 +172,42 @@ def FindLearningRate(Data):
         result.append([int(mse)])
     return scale[np.argmin(result)]
     
-net = Network([5,20,1],True)
-TrainingData = DataExtraction("trainingdata2.csv")
-TestData = DataExtraction("testdata2.csv")
+
+TrainingData = DataExtraction("trainingdata.csv")
+TestData = DataExtraction("testdata.csv")
+TrainingData2 = DataExtraction("trainingdata2.csv")
+TestData2 = DataExtraction("testdata2.csv")
+
 
 # =============================================================================
 # d = FindLearningRate(TrainingData)
 # =============================================================================
 
-
-net.StochasticGD(TrainingData, 2, 10, 0.00001,TestData)
-mse,predictions, accuracy = net.Evaluate(TestData,True)
-
-c = net.weights
-
-for i in c:
-    for j in i:
-        for d in j:
-            print(d)
-
+hiddenunits = 20
+net = Network([5,20,1])
+epochs = 1000
+batchsize = 10
+learningrate = 0.00001
+net.StochasticGD(TrainingData, epochs, hiddenunits, learningrate,TestData)
+mse,predictions, accuracy1 = net.Evaluate(TestData,True)
 
 PlotNetworkResults(predictions)
-PlotMSEProgression(net)
+PlotMSEProgression(net,epochs,hiddenunits,learningrate)
+PlotAccuracyProgression(net,epochs,hiddenunits,learningrate)
 
 
+hiddenunits = 20
+net1 = Network([5,hiddenunits,1])
+epochs = 2000
+batchsize = 10
+learningrate = 0.000005
+net1.StochasticGD(TrainingData2, epochs, hiddenunits, learningrate,TestData2)
+mse,predictions, accuracy = net1.Evaluate(TestData2,True)
+
+PlotNetworkResults(predictions)
+PlotMSEProgression(net1,epochs,hiddenunits,learningrate)
+PlotAccuracyProgression(net1,epochs,hiddenunits,learningrate)
+
+print(accuracy1[-1])
+print(accuracy[-1])
 
